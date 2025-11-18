@@ -179,7 +179,6 @@ spec:
       name: Publish to Repository
       action: publish:github # or gitlab, bitbucket
       input:
-        allowedHosts: [github.com, gitlab.com]
         repoUrl: ${{ parameters.repoUrl }}
         defaultBranch: main
         repoVisibility: private # Or 'public'
