@@ -13,7 +13,8 @@ buildNumber.properties
 # IDE
 .idea/
 *.iml
-.vscode/
+.vscode/*
+!.vscode/settings.json
 *.swp
 *.swo
 *~
@@ -36,4 +37,12 @@ Thumbs.db
 *.zip
 *.tar.gz
 *.rar
+
+# Backstage local testing instance (not part of template)
+backstage/
+
+# IDE project files
+skeleton/.project
+skeleton/.classpath
+skeleton/.settings/
 

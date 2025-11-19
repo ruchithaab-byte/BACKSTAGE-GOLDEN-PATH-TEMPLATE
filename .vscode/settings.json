@@ -1,0 +1,29 @@
+{
+  // Exclude skeleton directory from Java language server
+  "java.project.resourceFilters": [
+    "skeleton"
+  ],
+  "files.exclude": {
+    "**/skeleton/target": true,
+    "**/skeleton/**/*.class": true
+  },
+  // Treat skeleton files as plaintext (not Java)
+  "files.associations": {
+    "skeleton/**/*.java": "plaintext",
+    "skeleton/**/*.xml": "plaintext",
+    "skeleton/**/*.properties": "plaintext",
+    "skeleton/**/pom.xml": "xml"
+  },
+  // Disable Java language features for skeleton
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "java.import.maven.enabled": true,
+  "[java]": {
+    "files.exclude": {
+      "**/skeleton/**": true
+    }
+  },
+  // Editor settings
+  "editor.formatOnSave": false,
+  "java.compile.nullAnalysis.mode": "disabled"
+}
+
