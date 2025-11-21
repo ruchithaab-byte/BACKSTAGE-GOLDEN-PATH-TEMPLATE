@@ -1,8 +1,8 @@
 package com.hms.servicename.config;
 
 import com.hms.servicename.tenancy.MultiTenantConnectionProvider;
-import com.hms.servicename.tenancy.TenantIdentifierResolver;
 import org.hibernate.cfg.AvailableSettings;
+import org.hibernate.context.spi.CurrentTenantIdentifierResolver;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.orm.jpa.HibernatePropertiesCustomizer;
 import org.springframework.context.annotation.Bean;
@@ -14,7 +14,7 @@ import java.util.Map;
 public class HibernateConfig {
 
     @Autowired
-    private TenantIdentifierResolver tenantIdentifierResolver;
+    private CurrentTenantIdentifierResolver tenantIdentifierResolver;
 
     @Autowired
     private MultiTenantConnectionProvider multiTenantConnectionProvider;

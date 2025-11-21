@@ -1,12 +1,13 @@
 package com.hms.servicename.outbox;
 
+import com.hms.lib.common.audit.BaseEntity;
 import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.UUID;
 
 @Entity
 @Table(name = "outbox_events")
-public class OutboxEvent {
+public class OutboxEvent extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
