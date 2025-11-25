@@ -1,0 +1,174 @@
+package com.hms.{{ values.serviceName | replace("-", "") }}.service;
+
+import com.hms.lib.common.security.PermitSyncService;
+import com.hms.{{ values.serviceName | replace("-", "") }}.event.{{ values.serviceName | replace("-", "") | capitalize }}EventPublisher;
+import com.hms.{{ values.serviceName | replace("-", "") }}.event.UserCreatedEvent;
+import com.hms.{{ values.serviceName | replace("-", "") }}.model.OrganizationEntity;
+import com.hms.{{ values.serviceName | replace("-", "") }}.model.UserEntity;
+import com.hms.{{ values.serviceName | replace("-", "") }}.model.UserRoleEntity;
+import com.hms.{{ values.serviceName | replace("-", "") }}.repository.OrganizationRepository;
+import com.hms.{{ values.serviceName | replace("-", "") }}.repository.UserRepository;
+import com.hms.{{ values.serviceName | replace("-", "") }}.repository.UserRoleRepository;
+import com.scalekit.ScalekitClient;
+import com.scalekit.grpc.scalekit.v1.users.CreateUser;
+import com.scalekit.grpc.scalekit.v1.users.CreateUserAndMembershipRequest;
+import com.scalekit.grpc.scalekit.v1.users.CreateUserProfile;
+import com.scalekit.grpc.scalekit.v1.users.UpdateMembership;
+import com.scalekit.grpc.scalekit.v1.users.UpdateMembershipRequest;
+import com.scalekit.grpc.scalekit.v1.commons.Role;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+/**
+ * Service for managing users, organizations, and roles.
+ * 
+ * Implements the "Dual-Write" pattern:
+ * 1. Create in ScaleKit (external)
+ * 2. Create shadow entity in local Postgres (transactional)
+ * 3. Sync to Permit.io (async)
+ */
+@Service
+public class {{ values.serviceName | replace("-", "") | capitalize }}UserManagementService {
+
+    private static final Logger log = LoggerFactory.getLogger({{ values.serviceName | replace("-", "") | capitalize }}UserManagementService.class);
+
+    private final ScalekitClient scalekitClient;
+    private final UserRepository userRepository;
+    private final OrganizationRepository organizationRepository;
+    private final UserRoleRepository userRoleRepository;
+    private final PermitSyncService permitSyncService;
+    private final {{ values.serviceName | replace("-", "") | capitalize }}EventPublisher eventPublisher;
+
+    @Autowired
+    public {{ values.serviceName | replace("-", "") | capitalize }}UserManagementService(
+            ScalekitClient scalekitClient,
+            UserRepository userRepository,
+            OrganizationRepository organizationRepository,
+            UserRoleRepository userRoleRepository,
+            PermitSyncService permitSyncService,
+            {{ values.serviceName | replace("-", "") | capitalize }}EventPublisher eventPublisher) {
+        this.scalekitClient = scalekitClient;
+        this.userRepository = userRepository;
+        this.organizationRepository = organizationRepository;
+        this.userRoleRepository = userRoleRepository;
+        this.permitSyncService = permitSyncService;
+        this.eventPublisher = eventPublisher;
+    }
+
+    /**
+     * Create a new user in an organization.
+     */
+    @Transactional
+    public UserEntity createUser(String email, String firstName, String lastName, String organizationId) {
+        String userId = null;
+
+        try {
+            // 0. Lookup organization to get ScaleKit organization ID
+            OrganizationEntity organization = organizationRepository.findById(organizationId)
+                    .orElseThrow(() -> new RuntimeException("Organization not found: " + organizationId));
+
+            String scalekitOrgId = organization.getScalekitOrgId();
+
+            // 1. Build the SDK Request Object
+            CreateUserProfile userProfile = CreateUserProfile.newBuilder()
+                    .setFirstName(firstName != null ? firstName : "")
+                    .setLastName(lastName != null ? lastName : "")
+                    .build();
+
+            CreateUser createUser = CreateUser.newBuilder()
+                    .setEmail(email)
+                    .setUserProfile(userProfile)
+                    .build();
+
+            CreateUserAndMembershipRequest createRequest = CreateUserAndMembershipRequest.newBuilder()
+                    .setOrganizationId(scalekitOrgId)
+                    .setUser(createUser)
+                    .setSendInvitationEmail(false)
+                    .build();
+
+            // 2. Create in ScaleKit
+            var scalekitResponse = scalekitClient.users().createUserAndMembership(scalekitOrgId, createRequest);
+
+            // 3. Extract user ID
+            if (!scalekitResponse.hasUser()) {
+                throw new RuntimeException("User not returned from ScaleKit");
+            }
+            userId = scalekitResponse.getUser().getId();
+            String userEmail = scalekitResponse.getUser().getEmail();
+
+            // 4. Create Shadow User in Local Postgres
+            UserEntity localUser = new UserEntity();
+            localUser.setId(userId);
+            localUser.setScalekitId(userId);
+            localUser.setEmail(userEmail != null ? userEmail : email);
+            localUser.setFirstName(firstName);
+            localUser.setLastName(lastName);
+            localUser.setActive(true);
+            localUser = userRepository.save(localUser);
+
+            // 5. Sync to Permit.io (Async)
+            permitSyncService.syncUserAsync(userId, localUser.getEmail(), firstName, lastName, organizationId);
+
+            // 6. Publish Event
+            eventPublisher.publish("hms.user.created", 
+                new UserCreatedEvent(userId, localUser.getEmail(), organizationId, "default-role"));
+
+            log.info("User created successfully: userId={}", userId);
+            return localUser;
+
+        } catch (Exception e) {
+            log.error("Failed to create user", e);
+            // Simple rollback logic
+            if (userId != null) {
+                try {
+                    scalekitClient.users().deleteUser(userId);
+                } catch (Exception ex) {
+                    log.error("Failed to rollback ScaleKit user creation", ex);
+                }
+            }
+            throw new RuntimeException("Failed to create user", e);
+        }
+    }
+
+    /**
+     * Assign a role to a user.
+     */
+    @Transactional
+    public void assignRole(String userId, String roleName, String orgId) {
+        try {
+            // 1. Update local DB
+            if (!userRoleRepository.existsByUserIdAndOrganizationIdAndRoleName(userId, orgId, roleName)) {
+                UserRoleEntity userRole = new UserRoleEntity();
+                userRole.setUserId(userId);
+                userRole.setOrganizationId(orgId);
+                userRole.setRoleName(roleName);
+                userRoleRepository.save(userRole);
+            }
+
+            // 2. Assign role in ScaleKit
+            Role role = Role.newBuilder().setName(roleName).build();
+            UpdateMembership updateMembership = UpdateMembership.newBuilder().addRoles(role).build();
+            UpdateMembershipRequest updateRequest = UpdateMembershipRequest.newBuilder()
+                    .setOrganizationId(orgId)
+                    .setId(userId)
+                    .setMembership(updateMembership)
+                    .build();
+
+            scalekitClient.users().updateMembership(orgId, userId, updateRequest);
+
+            // 3. Sync to Permit.io
+            permitSyncService.assignRoleAsync(userId, roleName, orgId);
+
+            log.info("Role assigned: userId={}, role={}", userId, roleName);
+
+        } catch (Exception e) {
+            log.error("Failed to assign role", e);
+            throw new RuntimeException("Failed to assign role", e);
+        }
+    }
+}

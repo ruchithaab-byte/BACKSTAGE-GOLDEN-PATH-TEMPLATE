@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 @SpringBootApplication
 @ComponentScan(basePackages = {"com.hms.servicename", "com.hms.lib.common"})
 @EnableJpaAuditing(auditorAwareRef = "auditorAwareImpl")
+@org.springframework.retry.annotation.EnableRetry
+@org.springframework.scheduling.annotation.EnableAsync
 public class ServicenameApplication {
 
     public static void main(String[] args) {

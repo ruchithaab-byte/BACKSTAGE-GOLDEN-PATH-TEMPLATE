@@ -11,7 +11,7 @@
         
         <sequenceFlow id="flow1" sourceRef="kafkaStartEvent" targetRef="logTask" />
         <serviceTask id="logTask" name="Log the Event" 
-                     flowable:class="com.hms.servicename.workflow.LogEventDelegate" />
+                     flowable:delegateExpression="${logEventDelegate}" />
         
         <sequenceFlow id="flow2" sourceRef="logTask" targetRef="endEvent" />
         
