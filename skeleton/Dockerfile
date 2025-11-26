@@ -53,6 +53,10 @@ WORKDIR /app
 # Create a non-root user for security
 RUN addgroup --system spring && adduser --system --ingroup spring spring
 
+# Download OpenTelemetry Java Agent
+ADD https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar /app/opentelemetry-javaagent.jar
+RUN chmod 644 /app/opentelemetry-javaagent.jar
+
 USER spring:spring
 
 # Copy JAR from builder stage
@@ -62,5 +66,6 @@ COPY --from=builder /build/target/*.jar app.jar
 EXPOSE 8080
 
 # Factor XI: Stream logs to stdout (default in Spring Boot)
+# Use JAVA_TOOL_OPTIONS to attach the agent if configured
 ENTRYPOINT ["java", "-jar", "app.jar"]
 
