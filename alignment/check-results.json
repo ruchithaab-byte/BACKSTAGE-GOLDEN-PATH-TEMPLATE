@@ -1,0 +1,60 @@
+{
+  "generatedAt": "2025-11-26T09:58:49.089Z",
+  "checks": [
+    {
+      "name": "Permit SDK version parity",
+      "status": "pass",
+      "details": "Version 2.0.0"
+    },
+    {
+      "name": "Flowable version parity",
+      "status": "pass",
+      "details": "Version 7.0.1"
+    },
+    {
+      "name": "Logstash encoder version parity",
+      "status": "pass",
+      "details": "Version 7.4"
+    },
+    {
+      "name": "Catalog dependencies: hms-auth-bff",
+      "status": "pass",
+      "details": ""
+    },
+    {
+      "name": "Postgres DB provisioned: hms-auth-bff",
+      "status": "pass",
+      "details": ""
+    },
+    {
+      "name": "Kong route registered: hms-auth-bff",
+      "status": "pass",
+      "details": ""
+    },
+    {
+      "name": "Kuma dataplane present: hms-auth-bff",
+      "status": "pass",
+      "details": ""
+    },
+    {
+      "name": "Catalog dependencies: hms-onboarding-workflow",
+      "status": "pass",
+      "details": ""
+    },
+    {
+      "name": "Postgres DB provisioned: hms-onboarding-workflow",
+      "status": "pass",
+      "details": ""
+    },
+    {
+      "name": "Kong route registered: hms-onboarding-workflow",
+      "status": "pass",
+      "details": ""
+    },
+    {
+      "name": "Kuma dataplane present: hms-onboarding-workflow",
+      "status": "pass",
+      "details": ""
+    }
+  ]
+}

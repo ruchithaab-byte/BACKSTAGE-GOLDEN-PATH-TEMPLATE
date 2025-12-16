@@ -1,0 +1,25 @@
+{
+  "templateRoot": ".",
+  "backstageApp": "./backstage",
+  "localDevEnv": "../hms-local-dev-env",
+  "platformLibraries": "../hms-platform-libraries",
+  "apiContracts": "../hms-api-contracts",
+  "services": [
+    {
+      "name": "hms-auth-bff",
+      "path": "../hms-auth-bff",
+      "pattern": "saas-backend-for-frontend",
+      "postgresDb": "bff_db"
+    },
+    {
+      "name": "hms-onboarding-workflow",
+      "path": "../hms-onboarding-workflow",
+      "pattern": "event-driven-workflow",
+      "postgresDb": "workflow_db",
+      "flowableKafkaTopic": "hms.user.created",
+      "flowableEventKey": "userCreatedEvent",
+      "flowableProcessName": "onboardingProcess"
+    }
+  ]
+}
+
