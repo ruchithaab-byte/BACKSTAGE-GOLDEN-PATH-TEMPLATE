@@ -1,5 +1,6 @@
 package com.hims.core.auth;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -18,6 +19,9 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    @Value("${scalekit.jwk-set-uri}")
+    private String jwkSetUri;
 
     /**
      * Configures the security filter chain.
@@ -38,6 +42,10 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                 .requestMatchers("/api/v1/auth/login", "/api/v1/auth/health").permitAll()
+                .requestMatchers("/api/v1/patients/health").permitAll()
+                .requestMatchers("/api/v1/organizations/health").permitAll()
+                // Organization and user creation endpoints require M2M token (client_credentials)
+                .requestMatchers("/api/v1/organizations/**").authenticated()
                 .anyRequest().authenticated())
             .oauth2ResourceServer(oauth2 -> oauth2
                 .jwt(jwt -> jwt.decoder(jwtDecoder())));
@@ -55,10 +63,8 @@ public class SecurityConfig {
      */
     @Bean
     public JwtDecoder jwtDecoder() {
-        // TODO: Configure with actual Scalekit JWK Set URI
-        // For now, this is a placeholder
-        // In production: NimbusJwtDecoder.withJwkSetUri("https://scalekit.io/.well-known/jwks.json")
-        return NimbusJwtDecoder.withJwkSetUri("https://scalekit.io/.well-known/jwks.json").build();
+        // Scalekit JWK Set URI from configuration
+        return NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
     }
 }
 

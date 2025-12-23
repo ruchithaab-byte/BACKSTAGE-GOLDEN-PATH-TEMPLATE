@@ -41,11 +41,23 @@ public class KafkaEventPublisher implements EventPublisher {
             // Extract tenant ID from metadata for partitioning
             String tenantId = (String) metadata.getOrDefault("tenantId", "unknown");
             
-            kafkaTemplate.send(topic, tenantId, eventJson);
-            logger.debug("Published event: {} to topic: {}", eventType, topic);
+            // Use async send with error handling to avoid blocking
+            kafkaTemplate.send(topic, tenantId, eventJson)
+                .whenComplete((result, ex) -> {
+                    if (ex != null) {
+                        logger.warn("Failed to publish event {} to Kafka (topic: {}): {}. " +
+                                   "Event will NOT be retried - consider enabling transactional outbox pattern for production.",
+                                   eventType, topic, ex.getMessage());
+                    } else {
+                        logger.debug("Published event: {} to topic: {}", eventType, topic);
+                    }
+                });
         } catch (JsonProcessingException e) {
             logger.error("Failed to serialize event: {}", eventType, e);
             // In production, consider using transactional outbox pattern
+        } catch (Exception e) {
+            // Gracefully handle Kafka unavailability
+            logger.warn("Kafka unavailable - event {} not published: {}", eventType, e.getMessage());
         }
     }
 

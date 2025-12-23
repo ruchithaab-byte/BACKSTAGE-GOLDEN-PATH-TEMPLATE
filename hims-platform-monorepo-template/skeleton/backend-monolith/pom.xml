@@ -125,6 +125,56 @@
             <version>${flowable.version}</version>
         </dependency>
 
+        <!-- Scalekit Java SDK (v2.0.8) -->
+        <!-- https://docs.scalekit.com/sdks/java/ -->
+        <dependency>
+            <groupId>com.scalekit</groupId>
+            <artifactId>scalekit-sdk-java</artifactId>
+            <version>2.0.8</version>
+            <exclusions>
+                <!-- Exclude SLF4J to avoid conflict with Spring Boot's Logback -->
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-simple</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-nop</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>jcl-over-slf4j</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- Permit.io Java SDK for Authorization -->
+        <!-- https://docs.permit.io/sdk/java/quickstart -->
+        <dependency>
+            <groupId>io.permit</groupId>
+            <artifactId>permit-sdk-java</artifactId>
+            <version>2.0.0</version>
+            <exclusions>
+                <!-- Exclude SLF4J to avoid conflict with Spring Boot's Logback -->
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-simple</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-nop</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
         <!-- Testing -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

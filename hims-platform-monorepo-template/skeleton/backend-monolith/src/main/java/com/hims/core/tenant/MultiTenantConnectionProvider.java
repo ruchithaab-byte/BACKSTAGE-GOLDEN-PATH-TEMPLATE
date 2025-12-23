@@ -60,7 +60,8 @@ public class MultiTenantConnectionProvider
             }
             
             if (userId != null) {
-                stmt.execute("SET app.current_user = '" + userId + "'");
+                // Note: using current_user_id to avoid reserved keyword conflict
+                stmt.execute("SET app.current_user_id = '" + userId + "'");
             }
         }
         

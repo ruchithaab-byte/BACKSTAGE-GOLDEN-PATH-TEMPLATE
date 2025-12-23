@@ -10,7 +10,9 @@ spring:
   
   jpa:
     hibernate:
-      ddl-auto: validate
+      # Use 'none' since we manage schema with Flyway
+      # 'validate' doesn't work well with PostgreSQL custom enums (fhir_gender, data_sovereignty_region)
+      ddl-auto: none
     show-sql: false
     properties:
       hibernate:
@@ -70,9 +72,28 @@ springdoc:
     - group: auth-api
       display-name: Authentication API
       paths-to-match: /api/v1/auth/**
+    - group: organizations-api
+      display-name: Organizations API
+      paths-to-match: /api/v1/organizations/**
     - group: clinical-api
       display-name: Clinical API
       paths-to-match: /api/v1/patients/**
+
+# Scalekit Configuration
+# https://docs.scalekit.com/sdks/java/
+scalekit:
+  environment-url: ${SCALEKIT_ENVIRONMENT_URL:https://your-environment.scalekit.dev}
+  client-id: ${SCALEKIT_CLIENT_ID:your-client-id}
+  client-secret: ${SCALEKIT_CLIENT_SECRET:your-client-secret}
+  # Note: JWKS URI is at /keys, not /.well-known/jwks.json
+  jwk-set-uri: ${SCALEKIT_ENVIRONMENT_URL:https://your-environment.scalekit.dev}/keys
+
+# Permit.io Configuration (Authorization)
+# https://docs.permit.io/sdk/java/quickstart
+permit:
+  api-key: ${PERMIT_API_KEY:your-permit-api-key}
+  pdp-url: ${PERMIT_PDP_URL:https://cloudpdp.api.permit.io}
+  environment: ${PERMIT_ENVIRONMENT:development}
 
 # Logging
 logging:

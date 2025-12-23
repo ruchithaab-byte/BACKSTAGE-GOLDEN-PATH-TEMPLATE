@@ -33,12 +33,21 @@ public class KafkaAuditEventPublisher implements AuditEventPublisher {
     public void publish(AuditEvent event) {
         try {
             String eventJson = objectMapper.writeValueAsString(event);
-            kafkaTemplate.send(AUDIT_TOPIC, event.getTenantId(), eventJson);
-            logger.debug("Published audit event: {}", event.getAction());
+            kafkaTemplate.send(AUDIT_TOPIC, event.getTenantId(), eventJson)
+                .whenComplete((result, ex) -> {
+                    if (ex != null) {
+                        logger.warn("Failed to publish audit event {} to Kafka: {}. " +
+                                   "In production, use transactional outbox pattern.",
+                                   event.getAction(), ex.getMessage());
+                    } else {
+                        logger.debug("Published audit event: {}", event.getAction());
+                    }
+                });
         } catch (JsonProcessingException e) {
             logger.error("Failed to serialize audit event", e);
-            // In production, consider using transactional outbox pattern
-            // to ensure audit events are not lost
+        } catch (Exception e) {
+            // Gracefully handle Kafka unavailability
+            logger.warn("Kafka unavailable - audit event {} not published: {}", event.getAction(), e.getMessage());
         }
     }
 }
