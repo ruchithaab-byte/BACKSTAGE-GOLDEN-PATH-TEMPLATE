@@ -1,6 +1,0 @@
-package com.hims.modules.terminology.api.spi;
-
-public interface TerminologyServiceProvider {
-    // Placeholder
-}
-

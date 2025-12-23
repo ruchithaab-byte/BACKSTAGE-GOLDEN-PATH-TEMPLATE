@@ -1,6 +1,0 @@
-package com.hims.modules.documents.api.spi;
-
-public interface DocumentsServiceProvider {
-    // Placeholder
-}
-

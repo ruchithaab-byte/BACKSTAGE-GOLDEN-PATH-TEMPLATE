@@ -1,6 +1,0 @@
-package com.hims.modules.integration.api.spi;
-
-public interface IntegrationServiceProvider {
-    // Placeholder
-}
-

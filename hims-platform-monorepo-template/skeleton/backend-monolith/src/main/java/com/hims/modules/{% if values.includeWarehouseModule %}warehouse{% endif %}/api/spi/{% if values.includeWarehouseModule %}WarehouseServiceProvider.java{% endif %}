@@ -1,6 +1,0 @@
-package com.hims.modules.warehouse.api.spi;
-
-public interface WarehouseServiceProvider {
-    // Placeholder
-}
-

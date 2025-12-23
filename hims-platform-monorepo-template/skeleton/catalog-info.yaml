@@ -1,12 +1,12 @@
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: {{ values.platformName }}
-  description: {{ values.description }}
+  name: {{ values.platformName | lower }}
+  description: {{ values.description | default("HIMS Platform Monorepo") }}
   
   annotations:
     # Link to the Git repo
-    github.com/project-slug: ${{ values.repoUrl | parseRepoUrl | pick('owner') }}/${{ values.repoUrl | parseRepoUrl | pick('repo') }}
+    github.com/project-slug: {{ values.repoUrl | replace("https://github.com/", "") | replace(".git", "") }}
     
     # Platform type
     backstage.io/techdocs-ref: dir:.
@@ -14,16 +14,8 @@ metadata:
 spec:
   type: service
   lifecycle: experimental
-  owner: {{ values.owner }}
+  owner: {{ values.owner | default("platform-team") }}
+  {% if values.system %}
   system: {{ values.system }}
-  
-  # Platform consists of multiple services
-  providesApis:
-    - api:default/{{ values.platformName }}-backend-api
-    - api:default/{{ values.platformName }}-frontend-api
-  
-  dependsOn:
-    - resource:default/postgres-{{ values.postgresDbName }}
-    - resource:default/redis-{{ values.platformName }}-cache
-    - resource:default/kafka-{{ values.platformName }}
+  {% endif %}
 
