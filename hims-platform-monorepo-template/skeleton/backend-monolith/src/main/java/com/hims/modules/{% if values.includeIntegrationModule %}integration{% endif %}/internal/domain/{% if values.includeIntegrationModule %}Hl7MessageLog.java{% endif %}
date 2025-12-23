@@ -1,0 +1,95 @@
+package com.hims.modules.integration.internal.domain;
+
+import com.hims.core.tenant.TenantContext;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.OffsetDateTime;
+import java.util.UUID;
+
+/**
+ * HL7 Message Log Entity
+ * 
+ * Represents an HL7 message log entry for integration tracking.
+ * 
+ * Pattern: Integration Module
+ * - HL7 message logging
+ * - Message tracking
+ * - Error handling
+ * - Partitioned by date
+ */
+@Entity
+@Table(name = "hl7_message_log", schema = "integration")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class Hl7MessageLog {
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "id", updatable = false, nullable = false)
+    private UUID id;
+    
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    private UUID tenantId;
+    
+    @Column(name = "message_id", nullable = false, length = 255)
+    private String messageId;
+    
+    @Column(name = "message_type", nullable = false, length = 50)
+    private String messageType; // "ADT", "ORM", "ORU", etc.
+    
+    @Column(name = "message_control_id", length = 255)
+    private String messageControlId;
+    
+    @Column(name = "sending_application", length = 255)
+    private String sendingApplication;
+    
+    @Column(name = "sending_facility", length = 255)
+    private String sendingFacility;
+    
+    @Column(name = "receiving_application", length = 255)
+    private String receivingApplication;
+    
+    @Column(name = "receiving_facility", length = 255)
+    private String receivingFacility;
+    
+    @Column(name = "message_content", nullable = false, columnDefinition = "TEXT")
+    private String messageContent;
+    
+    @Column(name = "direction", nullable = false, length = 20)
+    private String direction; // "inbound", "outbound"
+    
+    @Column(name = "status", nullable = false, length = 50)
+    @Builder.Default
+    private String status = "received"; // "received", "processed", "failed", "error"
+    
+    @Column(name = "error_message", columnDefinition = "TEXT")
+    private String errorMessage;
+    
+    @Column(name = "processed_at")
+    private OffsetDateTime processedAt;
+    
+    @Column(name = "received_at", nullable = false, updatable = false)
+    @Builder.Default
+    private OffsetDateTime receivedAt = OffsetDateTime.now();
+    
+    @PrePersist
+    protected void onCreate() {
+        if (tenantId == null) {
+            String tenantIdStr = TenantContext.getTenantId();
+            if (tenantIdStr == null) {
+                throw new IllegalStateException("Tenant context must be set");
+            }
+            tenantId = UUID.fromString(tenantIdStr);
+        }
+        if (receivedAt == null) {
+            receivedAt = OffsetDateTime.now();
+        }
+    }
+}
+

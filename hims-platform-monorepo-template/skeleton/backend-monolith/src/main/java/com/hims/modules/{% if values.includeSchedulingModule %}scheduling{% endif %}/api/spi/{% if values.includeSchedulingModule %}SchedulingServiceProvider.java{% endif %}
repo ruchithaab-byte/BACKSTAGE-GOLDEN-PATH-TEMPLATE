@@ -1,0 +1,13 @@
+package com.hims.modules.scheduling.api.spi;
+
+import java.util.UUID;
+
+/**
+ * Service Provider Interface for Scheduling module.
+ * 
+ * Pattern: Scheduling Module
+ */
+public interface SchedulingServiceProvider {
+    // Placeholder - add actual service methods
+}
+

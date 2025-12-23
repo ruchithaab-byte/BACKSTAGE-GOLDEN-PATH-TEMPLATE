@@ -1,0 +1,154 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  # Java Backend CI
+  java-ci:
+    name: Java Backend CI
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: hims_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+      
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+      
+      - name: Run tests
+        run: |
+          cd skeleton
+          mvn clean test
+        env:
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/hims_test
+          SPRING_DATASOURCE_USERNAME: postgres
+          SPRING_DATASOURCE_PASSWORD: postgres
+      
+      - name: Run ArchUnit tests
+        run: |
+          cd skeleton
+          mvn test -Dtest=*ArchTest
+      
+      - name: Check code style
+        run: |
+          cd skeleton
+          mvn checkstyle:check
+        continue-on-error: true
+      
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-results
+          path: skeleton/target/surefire-reports/
+
+  # Template Validation
+  template-validation:
+    name: Template Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Validate template.yaml
+        run: |
+          # Basic YAML validation
+          python3 -c "import yaml; yaml.safe_load(open('template.yaml'))"
+          echo "✅ template.yaml is valid YAML"
+      
+      - name: Check skeleton structure
+        run: |
+          # Verify skeleton directory exists
+          test -d skeleton || (echo "❌ skeleton directory missing" && exit 1)
+          echo "✅ skeleton directory exists"
+      
+      - name: Validate Nunjucks syntax
+        run: |
+          # Check for common Nunjucks syntax errors
+          if grep -r "{% if" skeleton/ | grep -v "{% endif %}"; then
+            echo "⚠️  Potential unclosed Nunjucks blocks found"
+          fi
+          echo "✅ Nunjucks syntax check complete"
+
+  # Documentation Check
+  docs-check:
+    name: Documentation Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Check for broken links
+        run: |
+          # Check markdown files for common issues
+          find . -name "*.md" -type f | while read file; do
+            echo "Checking $file"
+            # Basic validation
+            if ! grep -q "^#" "$file"; then
+              echo "⚠️  $file may be missing headers"
+            fi
+          done
+      
+      - name: Validate documentation structure
+        run: |
+          # Check required docs exist
+          test -f PHASED_IMPLEMENTATION_PLAN.md || (echo "❌ Missing PHASED_IMPLEMENTATION_PLAN.md" && exit 1)
+          test -f PHASE_CHECKLIST.md || (echo "❌ Missing PHASE_CHECKLIST.md" && exit 1)
+          test -f COMPREHENSIVE_IMPLEMENTATION_PLAN.md || (echo "❌ Missing COMPREHENSIVE_IMPLEMENTATION_PLAN.md" && exit 1)
+          echo "✅ Required documentation files present"
+
+  # Security Scan
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+      
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+

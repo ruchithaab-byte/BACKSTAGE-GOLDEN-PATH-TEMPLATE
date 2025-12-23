@@ -1,0 +1,16 @@
+package com.hims.modules.communication.internal.web;
+
+import com.hims.modules.communication.api.spi.CommunicationServiceProvider;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/v1/communication")
+public class CommunicationController {
+    private final CommunicationServiceProvider service;
+    public CommunicationController(CommunicationServiceProvider service) { this.service = service; }
+    @GetMapping("/health")
+    public String health() { return "communication module is healthy"; }
+}
+

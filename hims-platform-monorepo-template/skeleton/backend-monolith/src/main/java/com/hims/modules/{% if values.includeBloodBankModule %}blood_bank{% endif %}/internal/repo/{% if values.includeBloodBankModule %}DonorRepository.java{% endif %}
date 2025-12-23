@@ -1,0 +1,47 @@
+package com.hims.modules.blood_bank.internal.repo;
+
+import com.hims.modules.blood_bank.internal.domain.Donor;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+/**
+ * Repository for Donor entity.
+ * 
+ * Pattern: Blood Bank Module
+ * - Donor queries by eligibility, blood group
+ * - Active donors
+ * - Eligible donors for donation
+ */
+@Repository
+public interface DonorRepository extends JpaRepository<Donor, UUID> {
+    
+    // Tenant isolation
+    List<Donor> findByTenantId(UUID tenantId);
+    
+    // Find by donor number
+    Optional<Donor> findByTenantIdAndDonorNumber(UUID tenantId, String donorNumber);
+    
+    // Find by blood group
+    List<Donor> findByTenantIdAndBloodGroup(UUID tenantId, String bloodGroup);
+    
+    // Find eligible donors
+    List<Donor> findByTenantIdAndEligibilityStatusAndIsActive(UUID tenantId, String eligibilityStatus, Boolean isActive);
+    
+    // Find active donors
+    List<Donor> findByTenantIdAndIsActive(UUID tenantId, Boolean isActive);
+    
+    // Find by name (fuzzy search)
+    @Query("SELECT d FROM Donor d WHERE d.tenantId = :tenantId AND LOWER(d.name) LIKE LOWER(CONCAT('%', :name, '%'))")
+    List<Donor> findByNameContaining(@Param("tenantId") UUID tenantId, @Param("name") String name);
+    
+    // Find eligible donors by blood group
+    @Query("SELECT d FROM Donor d WHERE d.tenantId = :tenantId AND d.bloodGroup = :bloodGroup AND d.eligibilityStatus = 'eligible' AND d.isActive = true")
+    List<Donor> findEligibleDonorsByBloodGroup(@Param("tenantId") UUID tenantId, @Param("bloodGroup") String bloodGroup);
+}
+

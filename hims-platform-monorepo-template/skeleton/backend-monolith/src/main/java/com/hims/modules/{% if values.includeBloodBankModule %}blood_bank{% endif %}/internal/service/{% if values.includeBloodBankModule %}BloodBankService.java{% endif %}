@@ -1,0 +1,141 @@
+package com.hims.modules.blood_bank.internal.service;
+
+import com.hims.core.audit.LogAudit;
+import com.hims.core.events.EventPublisher;
+import com.hims.core.events.EventMetadata;
+import com.hims.core.tenant.TenantContext;
+import com.hims.modules.blood_bank.api.spi.BloodBankServiceProvider;
+import com.hims.modules.blood_bank.internal.domain.BloodUnit;
+import com.hims.modules.blood_bank.internal.domain.Donor;
+import com.hims.modules.blood_bank.internal.repo.BloodUnitRepository;
+import com.hims.modules.blood_bank.internal.repo.DonorRepository;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+/**
+ * Service implementation for Blood Bank module.
+ * 
+ * Pattern: Blood Bank Module
+ * - Donor management (eligibility, registration)
+ * - Blood unit tracking (collection, testing, storage)
+ * - Cross-matching (compatibility testing)
+ * - Transfusion records
+ * 
+ * Critical for patient safety - all operations must be audited and tracked.
+ */
+@Service
+public class BloodBankService implements BloodBankServiceProvider {
+
+    private final BloodUnitRepository bloodUnitRepository;
+    private final DonorRepository donorRepository;
+    private final EventPublisher eventPublisher;
+
+    public BloodBankService(
+            BloodUnitRepository bloodUnitRepository,
+            DonorRepository donorRepository,
+            EventPublisher eventPublisher) {
+        this.bloodUnitRepository = bloodUnitRepository;
+        this.donorRepository = donorRepository;
+        this.eventPublisher = eventPublisher;
+    }
+
+    /**
+     * Get available blood units by blood group.
+     * 
+     * Pattern: Blood Bank - FEFO (First Expiry First Out) for blood units
+     * Returns units sorted by expiry date (earliest first).
+     * 
+     * Critical: Only returns non-expired, available units.
+     */
+    @LogAudit(
+        action = "GET_AVAILABLE_BLOOD_UNITS",
+        resourceType = "BLOOD_UNIT",
+        description = "Get available blood units by blood group (FEFO)"
+    )
+    public List<BloodUnit> getAvailableBloodUnits(String bloodGroup) {
+        String tenantId = TenantContext.getTenantId();
+        
+        // FEFO: Sort by expiry date (earliest first)
+        return bloodUnitRepository.findAvailableUnitsByBloodGroup(
+            UUID.fromString(tenantId),
+            bloodGroup
+        );
+    }
+
+    /**
+     * Check donor eligibility.
+     * 
+     * Pattern: Blood Bank - Eligibility management
+     * Checks if donor is eligible to donate based on:
+     * - Eligibility status
+     * - Deferral period
+     * - Last donation date (minimum interval)
+     */
+    @LogAudit(
+        action = "CHECK_DONOR_ELIGIBILITY",
+        resourceType = "DONOR",
+        description = "Check donor eligibility for donation"
+    )
+    public boolean checkDonorEligibility(UUID donorId) {
+        String tenantId = TenantContext.getTenantId();
+        
+        Donor donor = donorRepository.findById(donorId)
+            .orElseThrow(() -> new IllegalArgumentException("Donor not found"));
+        
+        // Check eligibility status
+        if (!"eligible".equals(donor.getEligibilityStatus())) {
+            return false;
+        }
+        
+        // Check if active
+        if (!Boolean.TRUE.equals(donor.getIsActive())) {
+            return false;
+        }
+        
+        // Check deferral period
+        if (donor.getDeferralUntilDate() != null && 
+            donor.getDeferralUntilDate().isAfter(LocalDate.now())) {
+            return false;
+        }
+        
+        // Check minimum interval since last donation (typically 56 days for whole blood)
+        if (donor.getLastDonationDate() != null) {
+            LocalDate nextEligibleDate = donor.getLastDonationDate().plusDays(56);
+            if (nextEligibleDate.isAfter(LocalDate.now())) {
+                return false;
+            }
+        }
+        
+        return true;
+    }
+
+    /**
+     * Example method showing Core Kernel integration.
+     */
+    @LogAudit(
+        action = "CREATE_BLOOD_UNIT",
+        resourceType = "BLOOD_UNIT",
+        description = "Create blood unit"
+    )
+    public void createExample() {
+        String tenantId = TenantContext.getTenantId();
+        String userId = TenantContext.getUserId();
+        
+        // Placeholder - add actual business logic here
+        
+        // Publish event via Core Kernel
+        eventPublisher.publish(
+            "blood_bank.blood_unit.created",
+            Map.of("id", "example-id"),
+            EventMetadata.create()
+                .withTenant(tenantId)
+                .withUser(userId)
+                .build()
+        );
+    }
+}
+

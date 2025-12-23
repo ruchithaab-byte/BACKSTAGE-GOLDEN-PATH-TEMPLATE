@@ -1,0 +1,14 @@
+package com.hims.modules.scheduling.internal.listener;
+
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.stereotype.Component;
+
+/**
+ * Kafka event listener for Scheduling module.
+ */
+@Component
+public class SchedulingEventListener {
+    @KafkaListener(topics = "clinical.encounter.created", groupId = "scheduling-service")
+    public void handleEncounterCreated(String message) { /* Placeholder */ }
+}
+

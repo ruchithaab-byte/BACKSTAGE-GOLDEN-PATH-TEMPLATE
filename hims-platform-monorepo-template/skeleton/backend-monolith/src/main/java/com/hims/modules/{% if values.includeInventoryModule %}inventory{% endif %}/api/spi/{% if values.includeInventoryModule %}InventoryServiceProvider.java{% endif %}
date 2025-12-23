@@ -1,0 +1,24 @@
+package com.hims.modules.inventory.api.spi;
+
+import java.util.UUID;
+
+/**
+ * Service Provider Interface for Inventory module.
+ * 
+ * This interface defines the public API for inventory management.
+ * Other modules can depend on this interface, but NOT on internal implementation.
+ * 
+ * Pattern: Inventory Module (FEFO + Batch Tracking)
+ */
+public interface InventoryServiceProvider {
+    
+    // Placeholder - add actual service methods here
+    // Methods should use DTOs from api.dto package
+    
+    // Example methods (to be implemented):
+    // - getItemsByLocation(UUID locationId)
+    // - getItemsByFefo(UUID locationId) - sorted by expiry
+    // - getItemByBatchNumber(String batchNumber)
+    // - updateStock(UUID itemId, Integer quantity)
+}
+

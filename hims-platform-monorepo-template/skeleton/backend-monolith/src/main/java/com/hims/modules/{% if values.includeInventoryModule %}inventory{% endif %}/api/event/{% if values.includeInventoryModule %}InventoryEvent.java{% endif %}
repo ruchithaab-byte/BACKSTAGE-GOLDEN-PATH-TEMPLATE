@@ -1,0 +1,24 @@
+package com.hims.modules.inventory.api.event;
+
+import java.util.UUID;
+
+/**
+ * Domain events for Inventory module.
+ * 
+ * Pattern: Inventory Module (FEFO + Batch Tracking)
+ * 
+ * Events:
+ * - inventory.item.created
+ * - inventory.item.updated
+ * - inventory.stock.updated
+ * - inventory.batch.expired
+ */
+public class InventoryEvent {
+    
+    private UUID itemId;
+    private String eventType;
+    private Object payload;
+    
+    // Placeholder - add actual event structure
+}
+

@@ -1,0 +1,10 @@
+package com.hims.modules.integration.api.event;
+
+import java.util.UUID;
+
+public class IntegrationEvent {
+    private UUID entityId;
+    private String eventType;
+    private Object payload;
+}
+

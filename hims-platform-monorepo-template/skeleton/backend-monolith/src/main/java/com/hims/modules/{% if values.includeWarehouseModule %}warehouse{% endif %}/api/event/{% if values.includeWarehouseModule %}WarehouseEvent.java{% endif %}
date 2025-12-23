@@ -1,0 +1,10 @@
+package com.hims.modules.warehouse.api.event;
+
+import java.util.UUID;
+
+public class WarehouseEvent {
+    private UUID entityId;
+    private String eventType;
+    private Object payload;
+}
+

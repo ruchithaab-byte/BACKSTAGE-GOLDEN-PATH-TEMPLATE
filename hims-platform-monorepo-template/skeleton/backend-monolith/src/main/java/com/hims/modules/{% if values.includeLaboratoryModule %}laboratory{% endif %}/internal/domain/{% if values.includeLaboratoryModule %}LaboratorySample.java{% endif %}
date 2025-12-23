@@ -1,0 +1,145 @@
+package com.hims.modules.laboratory.internal.domain;
+
+import com.hims.core.tenant.TenantContext;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+import java.time.OffsetDateTime;
+import java.util.UUID;
+
+/**
+ * Laboratory Sample Entity
+ * 
+ * Represents a laboratory sample with LIMS (Laboratory Information Management System) support.
+ * 
+ * Pattern: Laboratory Module (LIMS)
+ * - Sample collection workflow
+ * - QC (Quality Control) tracking
+ * - Machine interface support
+ */
+@Entity
+@Table(name = "samples", schema = "laboratory")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class LaboratorySample {
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "id", updatable = false, nullable = false)
+    private UUID id;
+    
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    private UUID tenantId;
+    
+    @Column(name = "created_at", nullable = false, updatable = false)
+    @Builder.Default
+    private OffsetDateTime createdAt = OffsetDateTime.now();
+    
+    @Column(name = "updated_at", nullable = false)
+    @Builder.Default
+    private OffsetDateTime updatedAt = OffsetDateTime.now();
+    
+    @Column(name = "created_by")
+    private UUID createdBy;
+    
+    @Column(name = "updated_by")
+    private UUID updatedBy;
+    
+    @Column(name = "encryption_key_id")
+    private String encryptionKeyId;
+    
+    @Column(name = "data_sovereignty_tag")
+    private String dataSovereigntyTag;
+    
+    @Column(name = "consent_ref")
+    private UUID consentRef;
+    
+    // Laboratory-specific fields
+    @Column(name = "sample_number", nullable = false, length = 50)
+    private String sampleNumber; // Unique sample number
+    
+    @Column(name = "barcode", length = 100)
+    private String barcode; // Sample barcode
+    
+    @Column(name = "qr_code_url", length = 500)
+    private String qrCodeUrl; // QR code URL for sample
+    
+    @Column(name = "collection_date")
+    private OffsetDateTime collectionDate;
+    
+    @Column(name = "collection_method", length = 100)
+    private String collectionMethod; // e.g., "Venipuncture", "Swab"
+    
+    @Column(name = "collection_container", length = 100)
+    private String collectionContainer; // e.g., "Vacutainer", "Swab"
+    
+    @Column(name = "container_color", length = 50)
+    private String containerColor; // Tube color
+    
+    @Column(name = "patient_mrn", length = 50)
+    private String patientMrn; // Patient Medical Record Number
+    
+    // Machine interface
+    @Column(name = "machine_id", length = 100)
+    private String machineId; // Lab machine identifier
+    
+    @Column(name = "machine_interface_status", length = 50)
+    private String machineInterfaceStatus; // "pending", "sent", "processed"
+    
+    @Column(name = "machine_request_id", length = 255)
+    private String machineRequestId; // Machine request ID
+    
+    // QC tracking
+    @Column(name = "quality_status", length = 50)
+    private String qualityStatus; // "pending", "passed", "failed"
+    
+    @Column(name = "quality_notes", columnDefinition = "TEXT")
+    private String qualityNotes;
+    
+    @Column(name = "volume_ml")
+    private Double volumeMl; // Sample volume in ml
+    
+    @Column(name = "quantity")
+    private Integer quantity; // Sample quantity
+    
+    // Soft FK to clinical
+    @Column(name = "test_order_id")
+    private UUID testOrderId; // Soft FK to clinical.test_orders(id)
+    
+    @Column(name = "patient_id")
+    private UUID patientId; // Soft FK to clinical.patients(id)
+    
+    @Column(name = "metadata", columnDefinition = "JSONB")
+    @JdbcTypeCode(SqlTypes.JSON)
+    private Object metadata;
+    
+    @PrePersist
+    protected void onCreate() {
+        if (tenantId == null) {
+            String tenantIdStr = TenantContext.getTenantId();
+            if (tenantIdStr == null) {
+                throw new IllegalStateException("Tenant context must be set");
+            }
+            tenantId = UUID.fromString(tenantIdStr);
+        }
+        if (createdAt == null) {
+            createdAt = OffsetDateTime.now();
+        }
+        if (updatedAt == null) {
+            updatedAt = OffsetDateTime.now();
+        }
+    }
+    
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = OffsetDateTime.now();
+    }
+}
+

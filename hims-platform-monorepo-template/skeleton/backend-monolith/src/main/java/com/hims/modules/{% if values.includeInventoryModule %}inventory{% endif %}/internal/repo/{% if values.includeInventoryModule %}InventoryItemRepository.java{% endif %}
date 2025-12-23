@@ -1,0 +1,45 @@
+package com.hims.modules.inventory.internal.repo;
+
+import com.hims.modules.inventory.internal.domain.InventoryItem;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * Repository for InventoryItem entity.
+ * 
+ * Pattern: Inventory Module (FEFO + Batch Tracking)
+ * - FEFO queries: Sort by expiry date
+ * - Batch tracking: Find by batch/lot number
+ */
+@Repository
+public interface InventoryItemRepository extends JpaRepository<InventoryItem, UUID> {
+    
+    // Tenant isolation
+    List<InventoryItem> findByTenantId(UUID tenantId);
+    
+    // FEFO: Find items by location, sorted by expiry date (earliest first)
+    @Query("SELECT i FROM InventoryItem i WHERE i.tenantId = :tenantId AND i.locationId = :locationId AND i.currentStock > 0 ORDER BY i.expiryDate ASC NULLS LAST")
+    List<InventoryItem> findItemsByLocationOrderedByExpiry(@Param("tenantId") UUID tenantId, @Param("locationId") UUID locationId);
+    
+    // Batch tracking
+    List<InventoryItem> findByTenantIdAndBatchNumber(UUID tenantId, String batchNumber);
+    
+    List<InventoryItem> findByTenantIdAndLotNumber(UUID tenantId, String lotNumber);
+    
+    // Stock management
+    List<InventoryItem> findByTenantIdAndCurrentStockLessThan(UUID tenantId, Integer threshold);
+    
+    // Find by item code
+    InventoryItem findByTenantIdAndItemCode(UUID tenantId, String itemCode);
+    
+    // Find items expiring soon
+    @Query("SELECT i FROM InventoryItem i WHERE i.tenantId = :tenantId AND i.expiryDate <= :expiryDate AND i.currentStock > 0")
+    List<InventoryItem> findItemsExpiringBy(@Param("tenantId") UUID tenantId, @Param("expiryDate") LocalDate expiryDate);
+}
+

@@ -1,0 +1,11 @@
+package com.hims.modules.warehouse.internal.listener;
+
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.stereotype.Component;
+
+@Component
+public class WarehouseEventListener {
+    @KafkaListener(topics = "clinical.encounter.completed", groupId = "warehouse-service")
+    public void handleEncounterCompleted(String message) { /* Placeholder */ }
+}
+

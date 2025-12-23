@@ -1,0 +1,17 @@
+package com.hims.modules.terminology.internal.repo;
+
+import com.hims.modules.terminology.internal.domain.CodeSystem;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+@Repository
+public interface CodeSystemRepository extends JpaRepository<CodeSystem, UUID> {
+    List<CodeSystem> findByTenantId(UUID tenantId);
+    Optional<CodeSystem> findByUrlAndVersion(String url, String version);
+    Optional<CodeSystem> findByIdentifier(String identifier);
+}
+

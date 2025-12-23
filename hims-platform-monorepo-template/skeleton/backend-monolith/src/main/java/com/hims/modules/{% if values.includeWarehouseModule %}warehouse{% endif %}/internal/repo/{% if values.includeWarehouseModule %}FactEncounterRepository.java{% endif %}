@@ -1,0 +1,15 @@
+package com.hims.modules.warehouse.internal.repo;
+
+import com.hims.modules.warehouse.internal.domain.FactEncounter;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.UUID;
+
+@Repository
+public interface FactEncounterRepository extends JpaRepository<FactEncounter, UUID> {
+    List<FactEncounter> findByTenantId(UUID tenantId);
+    List<FactEncounter> findByTenantIdAndPatientId(UUID tenantId, UUID patientId);
+}
+

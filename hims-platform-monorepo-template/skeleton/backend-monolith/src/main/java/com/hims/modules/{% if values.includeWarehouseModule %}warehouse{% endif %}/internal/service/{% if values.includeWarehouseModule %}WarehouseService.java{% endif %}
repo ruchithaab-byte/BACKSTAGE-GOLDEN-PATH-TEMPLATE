@@ -1,0 +1,28 @@
+package com.hims.modules.warehouse.internal.service;
+
+import com.hims.core.audit.LogAudit;
+import com.hims.core.events.EventPublisher;
+import com.hims.core.events.EventMetadata;
+import com.hims.core.tenant.TenantContext;
+import com.hims.modules.warehouse.api.spi.WarehouseServiceProvider;
+import com.hims.modules.warehouse.internal.repo.FactEncounterRepository;
+import org.springframework.stereotype.Service;
+
+import java.util.Map;
+
+@Service
+public class WarehouseService implements WarehouseServiceProvider {
+    private final FactEncounterRepository repository;
+    private final EventPublisher eventPublisher;
+    public WarehouseService(FactEncounterRepository repository, EventPublisher eventPublisher) {
+        this.repository = repository;
+        this.eventPublisher = eventPublisher;
+    }
+    @LogAudit(action = "CREATE_FACT_ENCOUNTER", resourceType = "FACT_ENCOUNTER", description = "Create fact encounter")
+    public void createExample() {
+        String tenantId = TenantContext.getTenantId();
+        String userId = TenantContext.getUserId();
+        eventPublisher.publish("warehouse.fact_encounter.created", Map.of("id", "example-id"), EventMetadata.create().withTenant(tenantId).withUser(userId).build());
+    }
+}
+

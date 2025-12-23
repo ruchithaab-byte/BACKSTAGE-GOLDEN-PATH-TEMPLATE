@@ -1,0 +1,29 @@
+package com.hims.modules.blood_bank.api.spi;
+
+import java.util.UUID;
+
+/**
+ * Service Provider Interface for Blood Bank module.
+ * 
+ * Pattern: Blood Bank Module
+ * - Donor management
+ * - Blood unit tracking
+ * - Cross-matching
+ * - Transfusion records
+ * 
+ * This interface defines the public API for blood bank operations.
+ * Other modules can depend on this interface, but NOT on internal implementation.
+ */
+public interface BloodBankServiceProvider {
+    
+    // Placeholder - add actual service methods here
+    // Methods should use DTOs from api.dto package
+    
+    // Example methods (to be implemented):
+    // - getAvailableBloodUnits(String bloodGroup)
+    // - registerDonor(DonorRegistrationDto dto)
+    // - performCrossMatch(UUID patientId, UUID bloodUnitId)
+    // - recordTransfusion(TransfusionDto dto)
+    // - checkDonorEligibility(UUID donorId)
+}
+

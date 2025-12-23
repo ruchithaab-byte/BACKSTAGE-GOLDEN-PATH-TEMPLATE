@@ -1,0 +1,226 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: hims-platform-monorepo
+  title: HIMS Platform Monorepo
+  description: A Golden Path template for creating the complete HIMS Platform monorepo structure with backend monolith, analytics worker, frontend, and infrastructure.
+
+spec:
+  owner: platform-team
+  type: service
+
+  # -----------------------------------------------------------------
+  # PARAMETERS: Defines the multi-step UI form
+  # -----------------------------------------------------------------
+  parameters:
+    # --- Step 1: Monorepo Setup ---
+    - title: Monorepo Setup
+      required:
+        - platformName
+        - description
+        - owner
+        - system
+      properties:
+        platformName:
+          title: Platform Name
+          type: string
+          description: Name of the platform (e.g., hims-platform)
+          default: hims-platform
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+          ui:help: Must be kebab-case (e.g., my-platform)
+        description:
+          title: Platform Description
+          type: string
+          description: A short description of the platform's purpose.
+        owner:
+          title: Owner
+          type: string
+          description: The owning team/group for this platform
+          ui:field: OwnerPicker
+          ui:options:
+            catalogFilter: { kind: 'Group' }
+        system:
+          title: System
+          type: string
+          description: The parent HMS System this platform belongs to
+          ui:field: EntityPicker
+          ui:options:
+            catalogFilter: { kind: 'System' }
+
+    # --- Step 2: Initial Modules Configuration ---
+    - title: Initial Modules
+      description: Select the modules to include in your platform. All 14 schemas are supported.
+      properties:
+        # P0: Critical Business Modules
+        includeClinicalModule:
+          title: Include Clinical Module
+          type: boolean
+          default: true
+          description: Clinical domain with FHIR support (Patient, Encounter, Observation)
+        includeBillingModule:
+          title: Include Billing Module
+          type: boolean
+          default: true
+          description: Billing domain with PM-JAY/NHCX support
+        includeInventoryModule:
+          title: Include Inventory Module
+          type: boolean
+          default: false
+          description: Inventory management with FEFO and batch tracking
+        includeLaboratoryModule:
+          title: Include Laboratory Module
+          type: boolean
+          default: false
+          description: Laboratory/LIMS with sample collection and QC tracking
+        includeAbdmModule:
+          title: Include ABDM Module
+          type: boolean
+          default: false
+          description: ABDM integration (ABHA, Care Context Linking, Consent)
+        
+        # P1: Important Support Modules
+        includeBloodBankModule:
+          title: Include Blood Bank Module
+          type: boolean
+          default: false
+          description: Blood bank management (donors, units, cross-matching)
+        includeSchedulingModule:
+          title: Include Scheduling Module
+          type: boolean
+          default: false
+          description: Appointments and scheduling (slots, queue, tokens)
+        includeCommunicationModule:
+          title: Include Communication Module
+          type: boolean
+          default: false
+          description: Notifications, templates, and campaigns
+        includeDocumentsModule:
+          title: Include Documents Module
+          type: boolean
+          default: false
+          description: Document management with version control
+        
+        # P2: Infrastructure Modules (can use generic pattern)
+        includeImagingModule:
+          title: Include Imaging Module
+          type: boolean
+          default: false
+          description: Medical imaging (DICOM, PACS integration)
+        includeWarehouseModule:
+          title: Include Warehouse Module
+          type: boolean
+          default: false
+          description: Warehouse management
+        includeTerminologyModule:
+          title: Include Terminology Module
+          type: boolean
+          default: false
+          description: Terminology and code systems
+        includeIntegrationModule:
+          title: Include Integration Module
+          type: boolean
+          default: false
+          description: External system integrations
+
+    # --- Step 3: Database Configuration ---
+    - title: Database Configuration
+      required:
+        - postgresDbName
+      properties:
+        postgresDbName:
+          title: PostgreSQL Database Name
+          type: string
+          description: The name of the logical database to use.
+          default: hims_db
+        includeSchemaInit:
+          title: Include Schema Initialization
+          type: boolean
+          default: true
+          description: Include initial schema migration files
+        includeComplianceFields:
+          title: Include Compliance Fields
+          type: boolean
+          default: true
+          description: Include DPDP/HIPAA compliance fields (encryption_key_id, data_sovereignty_tag, consent_ref)
+        schemaName:
+          title: Schema Name (for module templates)
+          type: string
+          description: PostgreSQL schema name (e.g., clinical, billing, inventory)
+          ui:help: Only used when scaffolding individual modules
+          default: ""
+
+    # --- Step 4: Repository Location ---
+    - title: Choose Repository Location
+      required:
+        - repoUrl
+      properties:
+        repoUrl:
+          title: Repository Location
+          type: string
+          ui:field: RepoUrlPicker
+          ui:options:
+            allowedHosts: [github.com, gitlab.com]
+
+  # -----------------------------------------------------------------
+  # STEPS: Defines the backend actions to run
+  # -----------------------------------------------------------------
+  steps:
+    # Step 1: Fetch and template the skeleton
+    - id: fetch-skeleton
+      name: Fetch Skeleton
+      action: fetch:template
+      input:
+        url: ./skeleton
+        values:
+          # Pass all parameters to Nunjucks
+          platformName: ${{ parameters.platformName }}
+          description: ${{ parameters.description }}
+          owner: ${{ parameters.owner }}
+          system: ${{ parameters.system }}
+          repoUrl: ${{ parameters.repoUrl }}
+          postgresDbName: ${{ parameters.postgresDbName }}
+          includeSchemaInit: ${{ parameters.includeSchemaInit }}
+          
+          # Pass module flags (all 14 modules)
+          includeClinicalModule: ${{ parameters.includeClinicalModule }}
+          includeBillingModule: ${{ parameters.includeBillingModule }}
+          includeInventoryModule: ${{ parameters.includeInventoryModule }}
+          includeLaboratoryModule: ${{ parameters.includeLaboratoryModule }}
+          includeAbdmModule: ${{ parameters.includeAbdmModule }}
+          includeBloodBankModule: ${{ parameters.includeBloodBankModule }}
+          includeSchedulingModule: ${{ parameters.includeSchedulingModule }}
+          includeCommunicationModule: ${{ parameters.includeCommunicationModule }}
+          includeDocumentsModule: ${{ parameters.includeDocumentsModule }}
+          includeImagingModule: ${{ parameters.includeImagingModule }}
+          includeWarehouseModule: ${{ parameters.includeWarehouseModule }}
+          includeTerminologyModule: ${{ parameters.includeTerminologyModule }}
+          includeIntegrationModule: ${{ parameters.includeIntegrationModule }}
+
+    # Step 2: Publish to the new Git repository
+    - id: publish
+      name: Publish to Repository
+      action: publish:github
+      input:
+        repoUrl: ${{ parameters.repoUrl }}
+        defaultBranch: main
+        repoVisibility: private
+
+    # Step 3: Register the new platform in the Backstage Catalog
+    - id: register
+      name: Register in Backstage
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+        catalogInfoPath: '/catalog-info.yaml'
+
+  # -----------------------------------------------------------------
+  # OUTPUT: Defines the links shown to the user on success
+  # -----------------------------------------------------------------
+  output:
+    links:
+      - title: View Repository
+        url: ${{ steps.publish.output.remoteUrl }}
+      - title: View in Catalog
+        icon: catalog
+        entityRef: ${{ steps.register.output.entityRef }}
+

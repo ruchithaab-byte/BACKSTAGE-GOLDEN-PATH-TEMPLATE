@@ -1,0 +1,306 @@
+openapi: 3.0.3
+info:
+  title: HIMS Platform - Authentication API
+  description: |
+    Authentication and user management API for the HIMS Platform.
+    
+    This API provides:
+    - User login (mock or real Scalekit integration)
+    - Current user profile retrieval
+    - Token validation
+    
+    All endpoints require authentication except `/health`.
+  version: 1.0.0
+  contact:
+    name: HIMS Platform Team
+    email: support@hims-platform.com
+
+servers:
+  - url: http://localhost:8080/api/v1/auth
+    description: Local development server
+  - url: https://api.hims-platform.com/api/v1/auth
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User authentication and token management
+  - name: Health
+    description: Health check endpoints
+
+paths:
+  /login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: |
+        Authenticate a user and return a JWT token.
+        
+        **Mock Implementation**: Currently returns a mock token for development.
+        **Production**: Will integrate with Scalekit OAuth2 to return real JWT tokens.
+      operationId: login
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              mock:
+                summary: Mock login (no credentials required)
+                value: {}
+              real:
+                summary: Real login (for future Scalekit integration)
+                value:
+                  email: "user@example.com"
+                  password: "password123"
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+              examples:
+                success:
+                  summary: Successful login
+                  value:
+                    token: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    message: "Login successful"
+                    expiresIn: 3600
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /me:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user profile
+      description: |
+        Returns the profile of the currently authenticated user.
+        The user is identified from the JWT token in the Authorization header.
+      operationId: getCurrentUser
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+              examples:
+                user:
+                  summary: Current user profile
+                  value:
+                    id: "550e8400-e29b-41d4-a716-446655440000"
+                    tenantId: "550e8400-e29b-41d4-a716-446655440001"
+                    email: "doctor@hospital.com"
+                    name: "Dr. John Doe"
+                    lastLoginAt: "2025-01-21T10:30:00Z"
+        '401':
+          description: Unauthorized - Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /validate:
+    post:
+      tags:
+        - Authentication
+      summary: Validate JWT token
+      description: |
+        Validates a JWT token and returns user information.
+        Useful for testing token validation logic.
+      operationId: validateToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateTokenRequest'
+      responses:
+        '200':
+          description: Token is valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '400':
+          description: Bad request - Token missing or invalid format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Token validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Returns the health status of the authentication service
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token from Scalekit
+
+  schemas:
+    LoginRequest:
+      type: object
+      description: Login credentials (optional for mock implementation)
+      properties:
+        email:
+          type: string
+          format: email
+          description: User email address
+          example: "user@example.com"
+        password:
+          type: string
+          format: password
+          description: User password
+          example: "password123"
+      required: []
+
+    LoginResponse:
+      type: object
+      description: Login response with JWT token
+      properties:
+        token:
+          type: string
+          description: JWT access token
+          example: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+        message:
+          type: string
+          description: Response message
+          example: "Login successful"
+        expiresIn:
+          type: integer
+          description: Token expiration time in seconds
+          example: 3600
+      required:
+        - token
+        - message
+
+    UserProfile:
+      type: object
+      description: User profile information
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: User ID
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        tenantId:
+          type: string
+          format: uuid
+          description: Tenant ID
+          example: "550e8400-e29b-41d4-a716-446655440001"
+        email:
+          type: string
+          format: email
+          description: User email address
+          example: "doctor@hospital.com"
+        name:
+          type: string
+          description: User full name
+          example: "Dr. John Doe"
+        lastLoginAt:
+          type: string
+          format: date-time
+          description: Last login timestamp
+          example: "2025-01-21T10:30:00Z"
+          nullable: true
+      required:
+        - id
+        - tenantId
+
+    ValidateTokenRequest:
+      type: object
+      description: Token validation request
+      properties:
+        token:
+          type: string
+          description: JWT token to validate
+          example: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+      required:
+        - token
+
+    HealthResponse:
+      type: object
+      description: Health check response
+      properties:
+        status:
+          type: string
+          description: Service status
+          example: "healthy"
+        service:
+          type: string
+          description: Service name
+          example: "auth"
+      required:
+        - status
+        - service
+
+    ErrorResponse:
+      type: object
+      description: Error response
+      properties:
+        error:
+          type: string
+          description: Error code
+          example: "UNAUTHORIZED"
+        message:
+          type: string
+          description: Error message
+          example: "Invalid or expired token"
+        timestamp:
+          type: string
+          format: date-time
+          description: Error timestamp
+          example: "2025-01-21T10:30:00Z"
+      required:
+        - error
+        - message
+        - timestamp
+

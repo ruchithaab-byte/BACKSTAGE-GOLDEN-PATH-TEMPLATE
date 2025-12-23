@@ -1,0 +1,10 @@
+package com.hims.modules.imaging.api.event;
+
+import java.util.UUID;
+
+public class ImagingEvent {
+    private UUID entityId;
+    private String eventType;
+    private Object payload;
+}
+

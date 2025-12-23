@@ -1,0 +1,176 @@
+package com.hims.modules.blood_bank.internal.domain;
+
+import com.hims.core.tenant.TenantContext;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.util.UUID;
+
+/**
+ * Blood Unit Entity
+ * 
+ * Represents a blood unit in the blood bank inventory with complete tracking
+ * from collection through testing to availability for transfusion.
+ * 
+ * Pattern: Blood Bank Module
+ * - Blood unit tracking (AABB standards)
+ * - Component type management (whole blood, packed RBC, platelets, plasma, etc.)
+ * - Expiry tracking
+ * - Testing results (HIV, HBV, HCV)
+ * - Storage location management
+ * 
+ * Critical for patient safety - blood units must be properly tested and tracked.
+ */
+@Entity
+@Table(name = "blood_units", schema = "blood_bank")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class BloodUnit {
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "id", updatable = false, nullable = false)
+    private UUID id;
+    
+    // ============================================================================
+    // TENANT ISOLATION (Core Kernel)
+    // ============================================================================
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    private UUID tenantId;
+    
+    // ============================================================================
+    // AUDIT COLUMNS (Core Kernel)
+    // ============================================================================
+    @Column(name = "created_at", nullable = false, updatable = false)
+    @Builder.Default
+    private OffsetDateTime createdAt = OffsetDateTime.now();
+    
+    @Column(name = "updated_at", nullable = false)
+    @Builder.Default
+    private OffsetDateTime updatedAt = OffsetDateTime.now();
+    
+    // ============================================================================
+    // BLOOD UNIT IDENTITY
+    // ============================================================================
+    @Column(name = "unit_number", nullable = false, length = 50, unique = true)
+    private String unitNumber; // Unique unit identifier
+    
+    @Column(name = "bag_number", length = 100)
+    private String bagNumber; // Physical bag number
+    
+    @Column(name = "barcode", length = 100, unique = true)
+    private String barcode; // Barcode for scanning
+    
+    // ============================================================================
+    // BLOOD DETAILS
+    // ============================================================================
+    @Column(name = "blood_group", nullable = false, length = 10)
+    private String bloodGroup; // "A+", "B-", "O+", "AB+", "A-", "B+", "O-", "AB-"
+    
+    @Column(name = "rh_factor", nullable = false, length = 5)
+    private String rhFactor; // "+", "-"
+    
+    @Column(name = "component_type", nullable = false, length = 50)
+    private String componentType; // "whole_blood", "packed_rbc", "platelets", "plasma", "cryoprecipitate", "ffp"
+    
+    // ============================================================================
+    // COLLECTION DETAILS
+    // ============================================================================
+    @Column(name = "donor_id")
+    private UUID donorId; // FK to blood_bank.donors(id)
+    
+    @Column(name = "collection_date", nullable = false)
+    private LocalDate collectionDate;
+    
+    @Column(name = "collection_time")
+    private LocalTime collectionTime;
+    
+    @Column(name = "collected_by_id")
+    private UUID collectedById; // Soft FK to clinical.practitioners(id)
+    
+    // ============================================================================
+    // PROCESSING DETAILS
+    // ============================================================================
+    @Column(name = "processing_date")
+    private LocalDate processingDate;
+    
+    @Column(name = "processing_time")
+    private LocalTime processingTime;
+    
+    @Column(name = "processed_by_id")
+    private UUID processedById; // Soft FK to clinical.practitioners(id)
+    
+    // ============================================================================
+    // EXPIRY & STORAGE
+    // ============================================================================
+    @Column(name = "expiry_date", nullable = false)
+    private LocalDate expiryDate; // Critical for patient safety
+    
+    @Column(name = "is_expired", nullable = false)
+    @Builder.Default
+    private Boolean isExpired = false; // Computed: expiry_date < CURRENT_DATE
+    
+    @Column(name = "volume_ml")
+    private Integer volumeMl; // Volume in milliliters (must be > 0)
+    
+    @Column(name = "status", nullable = false, length = 50)
+    @Builder.Default
+    private String status = "available"; // "available", "reserved", "transfused", "discarded", "quarantined"
+    
+    @Column(name = "storage_location", length = 255)
+    private String storageLocation; // Physical storage location
+    
+    // ============================================================================
+    // TESTING RESULTS (Mandatory for Patient Safety)
+    // ============================================================================
+    @Column(name = "test_results", columnDefinition = "JSONB")
+    @JdbcTypeCode(SqlTypes.JSON)
+    private Object testResults; // JSONB: {hiv: {tested, result, date, method}, hbv: {...}, hcv: {...}, syphilis: {...}}
+    
+    @Column(name = "notes", columnDefinition = "TEXT")
+    private String notes; // Additional notes
+    
+    // ============================================================================
+    // LIFECYCLE CALLBACKS
+    // ============================================================================
+    @PrePersist
+    protected void onCreate() {
+        if (tenantId == null) {
+            String tenantIdStr = TenantContext.getTenantId();
+            if (tenantIdStr == null) {
+                throw new IllegalStateException("Tenant context must be set");
+            }
+            tenantId = UUID.fromString(tenantIdStr);
+        }
+        if (createdAt == null) {
+            createdAt = OffsetDateTime.now();
+        }
+        if (updatedAt == null) {
+            updatedAt = OffsetDateTime.now();
+        }
+        // Auto-calculate is_expired
+        if (expiryDate != null) {
+            isExpired = expiryDate.isBefore(LocalDate.now());
+        }
+    }
+    
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = OffsetDateTime.now();
+        // Auto-calculate is_expired
+        if (expiryDate != null) {
+            isExpired = expiryDate.isBefore(LocalDate.now());
+        }
+    }
+}
+

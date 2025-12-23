@@ -1,0 +1,179 @@
+package com.hims.modules.imaging.internal.domain;
+
+import com.hims.core.tenant.TenantContext;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * Imaging Study Entity
+ * 
+ * Represents a DICOM imaging study with Orthanc integration.
+ * 
+ * Pattern: Imaging Module
+ * - DICOM integration (Orthanc PACS)
+ * - Study management
+ * - Critical finding tracking
+ * - WADO-RS endpoint support
+ */
+@Entity
+@Table(name = "imaging_studies", schema = "imaging")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ImagingStudy {
+    
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "id", updatable = false, nullable = false)
+    private UUID id;
+    
+    @Column(name = "tenant_id", nullable = false, updatable = false)
+    private UUID tenantId;
+    
+    @Column(name = "created_at", nullable = false, updatable = false)
+    @Builder.Default
+    private OffsetDateTime createdAt = OffsetDateTime.now();
+    
+    @Column(name = "updated_at", nullable = false)
+    @Builder.Default
+    private OffsetDateTime updatedAt = OffsetDateTime.now();
+    
+    @Column(name = "imaging_order_id")
+    private UUID imagingOrderId;
+    
+    @Column(name = "accession_number", length = 50)
+    private String accessionNumber;
+    
+    @Column(name = "orthanc_study_id", nullable = false, length = 255)
+    private String orthancStudyId;
+    
+    @Column(name = "dicom_study_uid", nullable = false, length = 255)
+    private String dicomStudyUid;
+    
+    @Column(name = "status", nullable = false, length = 50)
+    @Builder.Default
+    private String status = "available";
+    
+    @Column(name = "patient_id", nullable = false)
+    private UUID patientId;
+    
+    @Column(name = "encounter_id")
+    private UUID encounterId;
+    
+    @Column(name = "study_date")
+    private LocalDate studyDate;
+    
+    @Column(name = "study_time")
+    private LocalTime studyTime;
+    
+    @Column(name = "study_description", length = 500)
+    private String studyDescription;
+    
+    @Column(name = "modalities_in_study", columnDefinition = "TEXT[]")
+    private List<String> modalitiesInStudy;
+    
+    @Column(name = "number_of_series")
+    private Integer numberOfSeries;
+    
+    @Column(name = "number_of_instances")
+    private Integer numberOfInstances;
+    
+    @Column(name = "body_part_examined", length = 100)
+    private String bodyPartExamined;
+    
+    @Column(name = "procedure_code", columnDefinition = "JSONB")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Builder.Default
+    private Object procedureCode = "[]";
+    
+    @Column(name = "referring_physician", length = 255)
+    private String referringPhysician;
+    
+    @Column(name = "institution_name", length = 255)
+    private String institutionName;
+    
+    @Column(name = "reason_code", columnDefinition = "JSONB")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Builder.Default
+    private Object reasonCode = "[]";
+    
+    @Column(name = "interpreter_id")
+    private UUID interpreterId;
+    
+    @Column(name = "diagnostic_report_id")
+    private UUID diagnosticReportId;
+    
+    @Column(name = "viewer_url", columnDefinition = "TEXT")
+    private String viewerUrl;
+    
+    @Column(name = "wado_rs_endpoint", columnDefinition = "TEXT")
+    private String wadoRsEndpoint;
+    
+    @Column(name = "thumbnail_url", columnDefinition = "TEXT")
+    private String thumbnailUrl;
+    
+    @Column(name = "storage_size_bytes")
+    private Long storageSizeBytes;
+    
+    @Column(name = "series_summary", columnDefinition = "JSONB")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Builder.Default
+    private Object seriesSummary = "[]";
+    
+    @Column(name = "has_critical_finding", nullable = false)
+    @Builder.Default
+    private Boolean hasCriticalFinding = false;
+    
+    @Column(name = "critical_finding_at")
+    private OffsetDateTime criticalFindingAt;
+    
+    @Column(name = "critical_notified", nullable = false)
+    @Builder.Default
+    private Boolean criticalNotified = false;
+    
+    @Column(name = "data_sovereignty_tag", length = 50)
+    @Builder.Default
+    private String dataSovereigntyTag = "INDIA_LOCAL";
+    
+    @Column(name = "received_at", nullable = false)
+    @Builder.Default
+    private OffsetDateTime receivedAt = OffsetDateTime.now();
+    
+    @PrePersist
+    protected void onCreate() {
+        if (tenantId == null) {
+            String tenantIdStr = TenantContext.getTenantId();
+            if (tenantIdStr == null) {
+                throw new IllegalStateException("Tenant context must be set");
+            }
+            tenantId = UUID.fromString(tenantIdStr);
+        }
+        if (createdAt == null) {
+            createdAt = OffsetDateTime.now();
+        }
+        if (updatedAt == null) {
+            updatedAt = OffsetDateTime.now();
+        }
+        if (receivedAt == null) {
+            receivedAt = OffsetDateTime.now();
+        }
+    }
+    
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = OffsetDateTime.now();
+    }
+}
+

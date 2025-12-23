@@ -1,0 +1,45 @@
+package com.hims.modules.laboratory.internal.repo;
+
+import com.hims.modules.laboratory.internal.domain.LaboratorySample;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * Repository for LaboratorySample entity.
+ * 
+ * Pattern: Laboratory Module (LIMS)
+ * - Sample collection queries
+ * - QC tracking queries
+ * - Machine interface queries
+ */
+@Repository
+public interface LaboratorySampleRepository extends JpaRepository<LaboratorySample, UUID> {
+    
+    // Tenant isolation
+    List<LaboratorySample> findByTenantId(UUID tenantId);
+    
+    // Sample collection
+    LaboratorySample findByTenantIdAndSampleNumber(UUID tenantId, String sampleNumber);
+    
+    List<LaboratorySample> findByTenantIdAndBarcode(UUID tenantId, String barcode);
+    
+    // QC tracking
+    List<LaboratorySample> findByTenantIdAndQualityStatus(UUID tenantId, String qualityStatus);
+    
+    // Machine interface
+    List<LaboratorySample> findByTenantIdAndMachineId(UUID tenantId, String machineId);
+    
+    List<LaboratorySample> findByTenantIdAndMachineInterfaceStatus(UUID tenantId, String status);
+    
+    // Find by patient
+    List<LaboratorySample> findByTenantIdAndPatientId(UUID tenantId, UUID patientId);
+    
+    // Find by test order
+    List<LaboratorySample> findByTenantIdAndTestOrderId(UUID tenantId, UUID testOrderId);
+}
+

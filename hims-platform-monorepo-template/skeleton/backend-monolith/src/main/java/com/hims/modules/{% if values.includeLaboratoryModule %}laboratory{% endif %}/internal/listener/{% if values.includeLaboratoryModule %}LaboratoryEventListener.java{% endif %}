@@ -1,0 +1,30 @@
+package com.hims.modules.laboratory.internal.listener;
+
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.stereotype.Component;
+
+/**
+ * Kafka event listener for Laboratory module.
+ * 
+ * Pattern: Laboratory Module (LIMS)
+ * 
+ * Listens to:
+ * - clinical.test_order.created (to create samples)
+ * - machine.results.available (to receive test results)
+ */
+@Component
+public class LaboratoryEventListener {
+    
+    @KafkaListener(topics = "clinical.test_order.created", groupId = "laboratory-service")
+    public void handleTestOrderCreated(String message) {
+        // Placeholder - handle test order created event
+        // Create laboratory sample
+    }
+    
+    @KafkaListener(topics = "machine.results.available", groupId = "laboratory-service")
+    public void handleMachineResults(String message) {
+        // Placeholder - handle machine results event
+        // Update sample with results
+    }
+}
+

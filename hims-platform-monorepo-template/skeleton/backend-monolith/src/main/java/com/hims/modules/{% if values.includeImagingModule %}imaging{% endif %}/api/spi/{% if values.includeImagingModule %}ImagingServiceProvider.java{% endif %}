@@ -1,0 +1,6 @@
+package com.hims.modules.imaging.api.spi;
+
+public interface ImagingServiceProvider {
+    // Placeholder
+}
+

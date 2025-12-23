@@ -1,0 +1,527 @@
+openapi: 3.0.3
+info:
+  title: HIMS Platform - Clinical API
+  description: |
+    Clinical module API for patient management in the HIMS Platform.
+    
+    This API provides:
+    - Patient registration
+    - Patient retrieval by ID
+    - Patient search by name
+    
+    All endpoints require authentication and tenant context.
+    Patient data is automatically isolated by tenant via RLS policies.
+  version: 1.0.0
+  contact:
+    name: HIMS Platform Team
+    email: support@hims-platform.com
+
+servers:
+  - url: http://localhost:8080/api/v1/patients
+    description: Local development server
+  - url: https://api.hims-platform.com/api/v1/patients
+    description: Production server
+
+tags:
+  - name: Patients
+    description: Patient management operations
+  - name: Health
+    description: Health check endpoints
+
+paths:
+  /:
+    post:
+      tags:
+        - Patients
+      summary: Register a new patient
+      description: |
+        Registers a new patient in the system.
+        
+        **Input Validation**: 
+        - MRN must be unique per tenant
+        - Name must be in FHIR HumanName format
+        - Gender must be one of: male, female, other, unknown
+        
+        **RLS Verification**: 
+        - Tenant ID is automatically populated from JWT token
+        - RLS policies ensure tenant isolation
+        
+        **Event Publishing**: 
+        - Publishes `clinical.patient.created` event to Kafka
+      operationId: registerPatient
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatientDTO'
+            examples:
+              basic:
+                summary: Basic patient registration
+                value:
+                  mrn: "MRN-2025-001"
+                  name:
+                    use: "official"
+                    family: "Doe"
+                    given: ["John"]
+                  gender: "male"
+                  birthDate: "1980-01-15"
+                  telecom:
+                    - system: "phone"
+                      value: "+91-9876543210"
+                      use: "mobile"
+                  address:
+                    - use: "home"
+                      line: ["123 Main Street"]
+                      city: "Mumbai"
+                      state: "Maharashtra"
+                      postalCode: "400001"
+                      country: "IND"
+              withAbha:
+                summary: Patient with ABHA number
+                value:
+                  mrn: "MRN-2025-002"
+                  name:
+                    use: "official"
+                    family: "Smith"
+                    given: ["Jane"]
+                  gender: "female"
+                  birthDate: "1990-05-20"
+                  abhaNumber: "123456789012"
+                  abhaAddress: "jane.smith@abdm"
+                  telecom:
+                    - system: "phone"
+                      value: "+91-9876543211"
+                      use: "mobile"
+      responses:
+        '201':
+          description: Patient created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Patient'
+              examples:
+                created:
+                  summary: Created patient
+                  value:
+                    id: "550e8400-e29b-41d4-a716-446655440000"
+                    tenantId: "550e8400-e29b-41d4-a716-446655440001"
+                    mrn: "MRN-2025-001"
+                    name:
+                      use: "official"
+                      family: "Doe"
+                      given: ["John"]
+                    gender: "male"
+                    birthDate: "1980-01-15"
+                    isActive: true
+                    createdAt: "2025-01-21T10:30:00Z"
+        '400':
+          description: Bad request - Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflict - Patient with MRN already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /{id}:
+    get:
+      tags:
+        - Patients
+      summary: Get patient by ID
+      description: |
+        Retrieves a patient by their unique ID.
+        
+        **Tenant Isolation**: 
+        - Only returns patient if it belongs to the current tenant
+        - RLS policies enforce tenant isolation at database level
+      operationId: getPatient
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Patient UUID
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '200':
+          description: Patient retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Patient'
+        '404':
+          description: Patient not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /search:
+    get:
+      tags:
+        - Patients
+      summary: Search patients by name
+      description: |
+        Searches for patients by name (case-insensitive partial match).
+        
+        **Search Optimization**: 
+        - Uses generated `search_name` column for fast search
+        - Returns only active patients
+        - Results are automatically filtered by tenant
+      operationId: searchPatients
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: name
+          in: query
+          required: true
+          description: Name to search for (partial match, case-insensitive)
+          schema:
+            type: string
+            minLength: 1
+          example: "John"
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Patient'
+              examples:
+                results:
+                  summary: Search results
+                  value:
+                    - id: "550e8400-e29b-41d4-a716-446655440000"
+                      mrn: "MRN-2025-001"
+                      name:
+                        family: "Doe"
+                        given: ["John"]
+                      gender: "male"
+        '400':
+          description: Bad request - Invalid search parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Invalid or missing token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Returns the health status of the patient service
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "patient service is healthy"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token from Scalekit
+
+  schemas:
+    PatientDTO:
+      type: object
+      description: Patient registration data transfer object
+      required:
+        - mrn
+        - name
+        - gender
+        - birthDate
+      properties:
+        mrn:
+          type: string
+          description: Medical Record Number (unique per tenant)
+          maxLength: 50
+          example: "MRN-2025-001"
+        name:
+          type: object
+          description: FHIR HumanName structure
+          properties:
+            use:
+              type: string
+              enum: [usual, official, temp, nickname, anonymous, old, maiden]
+              example: "official"
+            family:
+              type: string
+              description: Family name (surname)
+              example: "Doe"
+            given:
+              type: array
+              items:
+                type: string
+              description: Given names (first names)
+              example: ["John"]
+            prefix:
+              type: array
+              items:
+                type: string
+              description: Name prefixes (e.g., "Dr.")
+            suffix:
+              type: array
+              items:
+                type: string
+              description: Name suffixes (e.g., "Jr.")
+          required:
+            - family
+            - given
+        gender:
+          type: string
+          enum: [male, female, other, unknown]
+          description: Patient gender
+          example: "male"
+        birthDate:
+          type: string
+          format: date
+          description: Date of birth (YYYY-MM-DD)
+          example: "1980-01-15"
+        telecom:
+          type: array
+          description: FHIR ContactPoint array
+          items:
+            type: object
+            properties:
+              system:
+                type: string
+                enum: [phone, fax, email, pager, url, sms, other]
+              value:
+                type: string
+              use:
+                type: string
+                enum: [home, work, temp, old, mobile]
+          example:
+            - system: "phone"
+              value: "+91-9876543210"
+              use: "mobile"
+        address:
+          type: array
+          description: FHIR Address array
+          items:
+            type: object
+            properties:
+              use:
+                type: string
+                enum: [home, work, temp, old, billing]
+              line:
+                type: array
+                items:
+                  type: string
+              city:
+                type: string
+              state:
+                type: string
+              postalCode:
+                type: string
+              country:
+                type: string
+          example:
+            - use: "home"
+              line: ["123 Main Street"]
+              city: "Mumbai"
+              state: "Maharashtra"
+              postalCode: "400001"
+              country: "IND"
+        maritalStatus:
+          type: object
+          description: FHIR CodeableConcept for marital status
+          nullable: true
+        abhaNumber:
+          type: string
+          description: ABHA (Ayushman Bharat Health Account) number
+          maxLength: 20
+          nullable: true
+          example: "123456789012"
+        abhaAddress:
+          type: string
+          description: ABHA address (e.g., "user@abdm")
+          maxLength: 100
+          nullable: true
+          example: "john.doe@abdm"
+        generalPractitionerId:
+          type: string
+          format: uuid
+          description: General practitioner ID (soft FK)
+          nullable: true
+        managingOrganization:
+          type: string
+          description: Managing organization identifier
+          maxLength: 255
+          nullable: true
+
+    Patient:
+      type: object
+      description: Patient entity (full response)
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Patient UUID
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        tenantId:
+          type: string
+          format: uuid
+          description: Tenant ID (automatically set via RLS)
+          example: "550e8400-e29b-41d4-a716-446655440001"
+        mrn:
+          type: string
+          description: Medical Record Number
+          example: "MRN-2025-001"
+        identifiers:
+          type: array
+          description: FHIR Identifier array
+          items:
+            type: object
+        isActive:
+          type: boolean
+          description: Whether patient is active
+          example: true
+        name:
+          type: object
+          description: FHIR HumanName structure
+        gender:
+          type: string
+          enum: [male, female, other, unknown]
+          example: "male"
+        birthDate:
+          type: string
+          format: date
+          example: "1980-01-15"
+        deceased:
+          type: boolean
+          default: false
+        deceasedDateTime:
+          type: string
+          format: date-time
+          nullable: true
+        telecom:
+          type: array
+          description: FHIR ContactPoint array
+        address:
+          type: array
+          description: FHIR Address array
+        maritalStatus:
+          type: object
+          nullable: true
+        photoUrl:
+          type: string
+          nullable: true
+        abhaNumber:
+          type: string
+          nullable: true
+        abhaAddress:
+          type: string
+          nullable: true
+        searchName:
+          type: string
+          description: Generated search name (family + given[0])
+          readOnly: true
+        searchPhone:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          readOnly: true
+        createdBy:
+          type: string
+          format: uuid
+          nullable: true
+        updatedBy:
+          type: string
+          format: uuid
+          nullable: true
+      required:
+        - id
+        - tenantId
+        - mrn
+        - name
+        - gender
+        - birthDate
+        - isActive
+
+    ErrorResponse:
+      type: object
+      description: Error response
+      properties:
+        error:
+          type: string
+          description: Error code
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          description: Error message
+          example: "MRN already exists"
+        timestamp:
+          type: string
+          format: date-time
+          description: Error timestamp
+          example: "2025-01-21T10:30:00Z"
+      required:
+        - error
+        - message
+        - timestamp
+

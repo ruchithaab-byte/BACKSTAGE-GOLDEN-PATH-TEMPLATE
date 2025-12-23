@@ -1,0 +1,6 @@
+package com.hims.modules.communication.api.spi;
+
+public interface CommunicationServiceProvider {
+    // Placeholder
+}
+

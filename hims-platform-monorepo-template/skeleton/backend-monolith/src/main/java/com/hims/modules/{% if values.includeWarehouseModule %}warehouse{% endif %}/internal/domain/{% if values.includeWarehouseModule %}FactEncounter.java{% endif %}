@@ -1,0 +1,80 @@
+package com.hims.modules.warehouse.internal.domain;
+
+import com.hims.core.tenant.TenantContext;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.OffsetDateTime;
+import java.util.UUID;
+
+/**
+ * Fact Encounter Entity (Data Warehouse)
+ * 
+ * Represents an encounter fact table for analytics and reporting.
+ * 
+ * Pattern: Warehouse Module (Data Warehouse)
+ * - Star schema fact table
+ * - Partitioned by date
+ * - Analytics/reporting support
+ */
+@Entity
+@Table(name = "fact_encounters", schema = "warehouse")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class FactEncounter {
+    
+    @Id
+    @Column(name = "org_id", nullable = false)
+    private UUID orgId;
+    
+    @Column(name = "tenant_id", nullable = false)
+    private UUID tenantId;
+    
+    @Column(name = "encounter_id", nullable = false)
+    private UUID encounterId;
+    
+    @Column(name = "patient_id")
+    private UUID patientId;
+    
+    @Column(name = "class", length = 50)
+    private String encounterClass; // "inpatient", "outpatient", "emergency"
+    
+    @Column(name = "status", length = 50)
+    private String status;
+    
+    @Column(name = "start_at", nullable = false)
+    private OffsetDateTime startAt;
+    
+    @Column(name = "end_at")
+    private OffsetDateTime endAt;
+    
+    @Column(name = "department", length = 100)
+    private String department;
+    
+    @Column(name = "location_id")
+    private UUID locationId;
+    
+    @Column(name = "created_at", nullable = false, updatable = false)
+    @Builder.Default
+    private OffsetDateTime createdAt = OffsetDateTime.now();
+    
+    @PrePersist
+    protected void onCreate() {
+        if (tenantId == null) {
+            String tenantIdStr = TenantContext.getTenantId();
+            if (tenantIdStr == null) {
+                throw new IllegalStateException("Tenant context must be set");
+            }
+            tenantId = UUID.fromString(tenantIdStr);
+        }
+        if (createdAt == null) {
+            createdAt = OffsetDateTime.now();
+        }
+    }
+}
+

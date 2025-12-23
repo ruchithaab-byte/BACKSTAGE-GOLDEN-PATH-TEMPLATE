@@ -1,0 +1,19 @@
+package com.hims.modules.integration.internal.repo;
+
+import com.hims.modules.integration.internal.domain.Hl7MessageLog;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+@Repository
+public interface Hl7MessageLogRepository extends JpaRepository<Hl7MessageLog, UUID> {
+    List<Hl7MessageLog> findByTenantId(UUID tenantId);
+    Optional<Hl7MessageLog> findByTenantIdAndMessageId(UUID tenantId, String messageId);
+    List<Hl7MessageLog> findByTenantIdAndMessageType(UUID tenantId, String messageType);
+    List<Hl7MessageLog> findByTenantIdAndStatus(UUID tenantId, String status);
+    List<Hl7MessageLog> findByTenantIdAndDirection(UUID tenantId, String direction);
+}
+
