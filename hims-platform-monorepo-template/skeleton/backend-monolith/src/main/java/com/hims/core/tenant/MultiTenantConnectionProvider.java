@@ -21,7 +21,7 @@ import java.util.Map;
  */
 @Component
 public class MultiTenantConnectionProvider
-        extends AbstractDataSourceBasedMultiTenantConnectionProviderImpl<String>
+        extends AbstractDataSourceBasedMultiTenantConnectionProviderImpl
         implements HibernatePropertiesCustomizer {
 
     private final DataSource dataSource;
@@ -47,9 +47,8 @@ public class MultiTenantConnectionProvider
             new TenantIdentifierResolver());
     }
 
-    @Override
     public Connection getConnection(String tenantIdentifier) throws SQLException {
-        Connection connection = super.getConnection(tenantIdentifier);
+        Connection connection = selectDataSource(tenantIdentifier).getConnection();
         
         // Set PostgreSQL session variables for RLS
         try (Statement stmt = connection.createStatement()) {

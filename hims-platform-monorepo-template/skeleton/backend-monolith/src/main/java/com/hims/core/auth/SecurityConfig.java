@@ -37,6 +37,7 @@ public class SecurityConfig {
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                .requestMatchers("/api/v1/auth/login", "/api/v1/auth/health").permitAll()
                 .anyRequest().authenticated())
             .oauth2ResourceServer(oauth2 -> oauth2
                 .jwt(jwt -> jwt.decoder(jwtDecoder())));
@@ -57,7 +58,7 @@ public class SecurityConfig {
         // TODO: Configure with actual Scalekit JWK Set URI
         // For now, this is a placeholder
         // In production: NimbusJwtDecoder.withJwkSetUri("https://scalekit.io/.well-known/jwks.json")
-        return NimbusJwtDecoder.withJwkSetUri("https://scalekit.io/.well-known/jwks.json");
+        return NimbusJwtDecoder.withJwkSetUri("https://scalekit.io/.well-known/jwks.json").build();
     }
 }
 

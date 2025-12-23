@@ -4,6 +4,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -32,6 +34,7 @@ import java.util.UUID;
 @Order(1) // Run before Spring Security filters
 public class TenantFilter extends OncePerRequestFilter {
 
+    private static final Logger log = LoggerFactory.getLogger(TenantFilter.class);
     private static final String TENANT_ID_HEADER = "X-Tenant-ID";
     private static final String USER_ID_HEADER = "X-User-ID"; // Optional, for non-JWT flows
 
@@ -51,7 +54,7 @@ public class TenantFilter extends OncePerRequestFilter {
                     TenantContext.setTenantId(tenantIdHeader);
                 } catch (IllegalArgumentException e) {
                     // Invalid UUID format - log warning but continue
-                    logger.warn("Invalid tenant ID format in header: {}", tenantIdHeader);
+                    log.warn("Invalid tenant ID format in header: {}", tenantIdHeader);
                 }
             }
             
@@ -62,7 +65,7 @@ public class TenantFilter extends OncePerRequestFilter {
                     UUID.fromString(userIdHeader);
                     TenantContext.setUserId(userIdHeader);
                 } catch (IllegalArgumentException e) {
-                    logger.warn("Invalid user ID format in header: {}", userIdHeader);
+                    log.warn("Invalid user ID format in header: {}", userIdHeader);
                 }
             }
             

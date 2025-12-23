@@ -1,6 +1,5 @@
 package com.hims.core.tenant;
 
-import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.context.spi.CurrentTenantIdentifierResolver;
 import org.springframework.stereotype.Component;
 
@@ -11,7 +10,7 @@ import org.springframework.stereotype.Component;
  * which tenant context to use for database operations.
  */
 @Component
-public class TenantIdentifierResolver implements CurrentTenantIdentifierResolver<String> {
+public class TenantIdentifierResolver implements CurrentTenantIdentifierResolver {
 
     @Override
     public String resolveCurrentTenantIdentifier() {
